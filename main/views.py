@@ -61,7 +61,7 @@ def home(request):
                 item_name=item.name,  # legacy для отображения в старых местах
                 serial=request.POST.get('serial', '') or None,
                 quantity=float(request.POST['quantity']),
-                unit=(request.POST.get('unit') or item.default_unit or 'шт').strip(),
+                unit=(item.default_unit or 'шт').strip(),
                 receiver_name=(request.POST.get('receiver_name') or '').strip() or None,
                 vehicle=(request.POST.get('vehicle') or '').strip() or None,
                 comment=(request.POST.get('comment') or '').strip() or None,

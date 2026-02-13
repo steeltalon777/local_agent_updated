@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 from datetime import datetime
-
+from pathlib import Path
 from django.conf import settings
 from django.core.files.base import ContentFile
 
@@ -29,8 +29,15 @@ def _register_fonts_once() -> None:
         return
 
     try:
-        pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
-        pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
+        font_dir = Path(settings.BASE_DIR) / "main" / "assets" / "fonts"
+
+        pdfmetrics.registerFont(
+            TTFont("DejaVuSans", str(font_dir / "DejaVuSans.ttf"))
+        )
+
+        pdfmetrics.registerFont(
+            TTFont("DejaVuSans-Bold", str(font_dir / "DejaVuSans-Bold.ttf"))
+        )
         _FONTS_REGISTERED = True
     except Exception:
         # Ничего страшного. Просто не будет кириллического шрифта.

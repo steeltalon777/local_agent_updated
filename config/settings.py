@@ -140,7 +140,8 @@ ACCOUNTING_EMAIL = os.environ.get('ACCOUNTING_EMAIL', '')
 # === Локальный склад (где установлено ПО) ===
 # Один инстанс приложения обслуживает «свой» склад.
 # Все операции должны затрагивать этот склад (move не может быть между двумя «чужими» складами).
-LOCAL_SITE_NAME = os.environ.get('LOCAL_SITE_NAME', '').strip()
+LOCAL_SITE_NAME = "Угдан (Локальный склад)"
+LOCAL_SITE_ID = int(os.environ.get("LOCAL_SITE_ID", "1"))
 
 # === Почта офиса (куда слать накладные) ===
 # Для обратной совместимости OFFICE_EMAIL по умолчанию берётся из ACCOUNTING_EMAIL.
