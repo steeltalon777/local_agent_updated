@@ -48,6 +48,14 @@ class Item(models.Model):
     name = models.CharField('Наименование ТМЦ', max_length=255, unique=True)
     default_unit = models.CharField('Ед. изм (по умолчанию)', max_length=50, default='шт')
     sku = models.CharField('Артикул/SKU', max_length=100, blank=True, null=True)
+    inventory_number = models.CharField(
+        "Инвентарный номер",
+        max_length=100,
+        blank=True,
+        null=True,
+        unique=True,
+        db_index=True,
+    )
 
     class Meta:
         verbose_name = 'ТМЦ'

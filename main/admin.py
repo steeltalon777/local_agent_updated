@@ -4,6 +4,10 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User  # Импортируем стандартного User
 from .models import UserProfile, Site, Operation, Item
 
+@admin.register(Item)
+class ItemAdmin(admin.ModelAdmin):
+    list_display = ("name", "inventory_number", "default_unit", "sku")
+    search_fields = ("name", "inventory_number", "sku")
 
 # Инлайн для профиля в админке User
 class UserProfileInline(admin.StackedInline):
