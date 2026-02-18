@@ -1,0 +1,160 @@
+# main/models.py
+from django.db import models
+from django.contrib.auth.models import User  # Используем стандартного User
+
+
+# Профиль пользователя с ФИО
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    full_name = models.CharField('ФИО', max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = 'Профиль пользователя'
+        verbose_name_plural = 'Профили пользователей'
+
+    def __str__(self):
+        return self.full_name or self.user.username
+
+    def save(self, *args, **kwargs):
+        # Автоматически заполняем full_name, если не указано
+        if not self.full_name and (self.user.first_name or self.user.last_name):
+            self.full_name = f"{self.user.first_name or ''} {self.user.last_name or ''}".strip()
+        super().save(*args, **kwargs)
+
+    def get_display_name(self):
+        """Возвращает ФИО если есть, иначе username"""
+        if self.full_name:
+            return self.full_name
+        elif self.user.first_name or self.user.last_name:
+            return f"{self.user.first_name or ''} {self.user.last_name or ''}".strip()
+        else:
+            return self.user.username
+
+# Объект (склад/участок) - оставляем как есть
+class Site(models.Model):
+    name = models.CharField('Наименование объекта', max_length=255, unique=True)
+    code = models.CharField('Короткий код', max_length=50, blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Объект'
+        verbose_name_plural = 'Объекты'
+
+    def __str__(self):
+        return self.name
+
+
+class AppSettings(models.Model):
+    """Глобальные настройки приложения, редактируемые через админку.
+
+    Это singleton-таблица (одна строка). Держим настройки в БД, чтобы не
+    править settings.py руками на каждой установке.
+    """
+
+    local_site_name = models.CharField(
+        'LOCAL_SITE_NAME (имя локального склада)',
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Если заполнено, переопределяет settings.LOCAL_SITE_NAME и используется как имя локального склада.'
+    )
+    office_email = models.EmailField(
+        'Email для накладных (получатель)',
+        blank=True,
+        default='',
+        help_text='Куда отправлять PDF-накладные. Если пусто, отправка не выполняется.'
+    )
+    updated_at = models.DateTimeField('Обновлено', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Настройки приложения'
+        verbose_name_plural = 'Настройки приложения'
+
+    def __str__(self):
+        return 'Настройки приложения'
+
+    @classmethod
+    def get_solo(cls) -> 'AppSettings':
+        obj, _ = cls.objects.get_or_create(id=1)
+        return obj
+
+
+# Справочник номенклатуры
+class Item(models.Model):
+    name = models.CharField('Наименование ТМЦ', max_length=255, unique=True)
+    default_unit = models.CharField('Ед. изм (по умолчанию)', max_length=50, default='шт')
+    sku = models.CharField('Инвентарный номер', max_length=100, blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'ТМЦ'
+        verbose_name_plural = 'ТМЦ'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+# Типы операций - оставляем как есть
+class OperationType(models.TextChoices):
+    INCOMING = 'incoming', 'Приход'
+    MOVE = 'move', 'Перемещение'
+    WRITEOFF = 'writeoff', 'Списание'
+    ISSUE = 'issue', 'Выдача (расход)'
+
+
+# Операция движения - меняем created_by на стандартного User
+# Операция движения
+class Operation(models.Model):
+    created_at = models.DateTimeField('Дата и время создания', auto_now_add=True)
+    operation_type = models.CharField(
+        'Тип операции',
+        max_length=20,
+        choices=OperationType.choices
+    )
+    # УБИРАЕМ это поле: site = models.ForeignKey(Site, on_delete=models.PROTECT, verbose_name='Объект')
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, verbose_name='Создал')
+    # Новое поле (основное)
+    item = models.ForeignKey(Item, on_delete=models.PROTECT, verbose_name='ТМЦ')
+
+    # Legacy поле (для совместимости после миграции)
+    item_name = models.CharField('Наименование (legacy)', max_length=255, blank=True, null=True)
+    serial = models.CharField('Серийный номер', max_length=255, blank=True, null=True)
+    quantity = models.FloatField('Количество', default=1)
+    unit = models.CharField('Единица измерения', max_length=50, default='шт')
+
+    receiver_name = models.CharField('Получатель', max_length=255, blank=True, null=True)
+    vehicle = models.CharField('Транспорт', max_length=255, blank=True, null=True)
+
+    # ДОБАВЛЯЕМ эти два поля вместо from_location/to_location:
+    from_site = models.ForeignKey(Site, on_delete=models.PROTECT, verbose_name='Откуда (склад)',
+                                  related_name='operations_from', null=True, blank=True)
+    to_site = models.ForeignKey(Site, on_delete=models.PROTECT, verbose_name='Куда (склад)',
+                                related_name='operations_to', null=True, blank=True)
+
+    # Старые поля оставляем для совместимости, но делаем nullable:
+    from_location = models.CharField('Откуда (локация)', max_length=255, blank=True, null=True)
+    to_location = models.CharField('Куда (локация)', max_length=255, blank=True, null=True)
+
+    comment = models.TextField('Комментарий', blank=True, null=True)
+
+    pdf_file = models.FileField('PDF накладной', upload_to='invoices/', blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Операция'
+        verbose_name_plural = 'Операции'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        name = self.item.name if self.item_id else (self.item_name or '')
+        return f'{self.get_operation_type_display()} - {name}'
+
+    @property
+    def display_item_name(self) -> str:
+        return self.item.name if self.item_id else (self.item_name or '')
+
+    @property
+    def display_unit(self) -> str:
+        if self.unit:
+            return self.unit
+        if self.item_id:
+            return self.item.default_unit
+        return 'шт'

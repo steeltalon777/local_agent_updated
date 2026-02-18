@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Операции</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        a.button, button.button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 16px;
+            text-decoration: none;
+            border-radius: 3px;
+            display: inline-block;
+            border: none;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th { background: #f2f2f2; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .small { font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div>
+        <h1 style="margin-bottom:4px;">Операции</h1>
+        <div class="small">Локальный склад: <strong>{{ local_site.name }}</strong></div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+        <a class="button" href="/">← На главную</a>
+        <a class="button" href="/stocks/" style="background:#2d7;">Остатки</a>
+    </div>
+</div>
+
+{% if messages %}
+<div style="margin-bottom: 14px;">
+    {% for message in messages %}
+    <div style="padding:10px; border-radius:3px; margin-bottom:6px; {% if message.tags == 'success' %}background:#d4edda; color:#155724;{% elif message.tags == 'error' %}background:#f8d7da; color:#721c24;{% else %}background:#eef; color:#224;{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<form method="get" style="margin: 10px 0 16px 0; display:flex; gap:10px; align-items:center;">
+    <input
+        type="text"
+        name="q"
+        value="{{ q|default:'' }}"
+        placeholder="Поиск: ТМЦ / комментарий / получатель / транспорт"
+        style="flex:1; padding:10px; border:1px solid #ddd; border-radius:3px;"
+    />
+    <button type="submit" class="button" style="border:none;">Найти</button>
+    {% if q %}
+        <a class="button" href="?" style="background:#777;">Сброс</a>
+    {% endif %}
+</form>
+
+<div class="small" style="margin-bottom:6px;">
+    Показано: <strong>{{ operations|length }}</strong> (максимум 500 для адекватности 😅)
+</div>
+
+{% if operations %}
+<table>
+    <thead>
+    <tr>
+        <th>Дата</th>
+        <th>Тип</th>
+        <th>Наименование</th>
+        <th>Откуда</th>
+        <th>Куда</th>
+        <th>Кол-во</th>
+        <th>PDF</th>
+        <th>Создал</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for op in operations %}
+    <tr>
+        <td>{{ op.created_at|date:"d.m.Y H:i" }}</td>
+        <td>{{ op.get_operation_type_display }}</td>
+        <td>{{ op.display_item_name }}</td>
+        <td>{% if op.from_site %}{{ op.from_site.name }}{% endif %}</td>
+        <td>{% if op.to_site %}{{ op.to_site.name }}{% endif %}</td>
+        <td>{{ op.quantity }} {{ op.display_unit }}</td>
+        <td>
+            {% if op.pdf_file %}
+                <a href="/operations/{{ op.id }}/pdf/" target="_blank">Открыть</a>
+                |
+                <a href="/operations/{{ op.id }}/pdf/?download=1">Скачать</a>
+            {% else %}
+                {% if op.operation_type != 'incoming' %}
+                    <form method="post" action="/operations/{{ op.id }}/invoice/generate/" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" style="padding: 4px 8px; font-size: 12px;">Сформировать PDF</button>
+                    </form>
+                {% else %}
+                    <span style="color:#777;">—</span>
+                {% endif %}
+            {% endif %}
+        </td>
+        <td>
+            {% if op.created_by.profile and op.created_by.profile.full_name %}
+            {{ op.created_by.profile.full_name }}
+            {% elif op.created_by.first_name or op.created_by.last_name %}
+            {{ op.created_by.first_name }} {{ op.created_by.last_name }}
+            {% else %}
+            {{ op.created_by.username }}
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>Пока нет операций.</p>
+{% endif %}
+
+</body>
+</html>
