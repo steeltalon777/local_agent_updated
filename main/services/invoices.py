@@ -90,8 +90,6 @@ def build_invoice_pdf_bytes(operation) -> bytes:
     story = []
     story.append(Paragraph(f"Накладная №{number} от {date_str}", title_style))
     story.append(Spacer(1, 6 * mm))
-    story.append(Paragraph(f"{shipper}", normal))
-    story.append(Paragraph(f"Грузополучатель: {consignee}", normal))
     story.append(Spacer(1, 4 * mm))
     story.append(Paragraph(f"Основание для отпуска: {basis}", normal))
     story.append(Spacer(1, 6 * mm))
