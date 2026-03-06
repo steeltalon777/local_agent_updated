@@ -1,0 +1,10 @@
+{% extends 'main/base.html' %}
+{% block title %}Категории{% endblock %}
+{% block page_title %}Категории{% endblock %}
+{% block content %}
+<a class="btn" href="/catalog/categories/create/">Создать категорию</a>
+<table>
+<tr><th>Категория</th><th>Родитель</th><th>Активна</th><th></th></tr>
+{% for c in categories %}<tr><td>{{ c.name }}</td><td>{{ c.parent|default:'—' }}</td><td>{{ c.is_active|yesno:'Да,Нет' }}</td><td><a href="/catalog/categories/{{ c.id }}/edit/">Редактировать</a></td></tr>{% endfor %}
+</table>
+{% endblock %}

@@ -25,4 +25,6 @@ class MainConfig(AppConfig):
 
     def ready(self):
         from django.db.backends.signals import connection_created
+
         connection_created.connect(_enable_sqlite_pragmas, dispatch_uid='local_agent_sqlite_pragmas')
+        import main.signals  # noqa: F401

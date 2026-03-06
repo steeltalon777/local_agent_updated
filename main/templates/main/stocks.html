@@ -1,119 +1,21 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Остатки</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-
-        a.button {
-            background: #4CAF50;
-            color: white;
-            padding: 10px 16px;
-            text-decoration: none;
-            border-radius: 3px;
-            display: inline-block;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-
-        th {
-            background: #f2f2f2;
-        }
-
-        tr:nth-child(even) {
-            background: #f9f9f9;
-        }
-    </style>
-</head>
-<body>
-
-<div class="header">
-    <div>
-        <h1>Остатки</h1>
-        <div style="color:#666; margin-top:-8px;">Склад: <strong>{{ local_site.name }}</strong></div>
-    </div>
-    <div>
-        <a class="button" href="/">← На главную</a>
-    </div>
-</div>
-
-<form method="get" style="margin: 10px 0 16px 0; display:flex; gap:10px; align-items:center;">
-    <input
-        type="text"
-        name="q"
-        value="{{ q|default:'' }}"
-        placeholder="Поиск по названию ТМЦ"
-        style="flex:1; padding:10px; border:1px solid #ddd; border-radius:3px;"
-    />
+{% extends 'main/base.html' %}
+{% block title %}Остатки{% endblock %}
+{% block page_title %}Остатки{% endblock %}
+{% block content %}
+<form method="get" class="card">
+    <input type="text" name="q" value="{{ q }}" placeholder="Поиск по ТМЦ/SKU">
     <input type="hidden" name="sort" value="{{ sort|default:'item' }}" />
     <input type="hidden" name="dir" value="{{ dir|default:'asc' }}" />
-    <button type="submit" class="button" style="border:none; cursor:pointer;">Найти</button>
-    {% if q %}
-        <a class="button" href="?" style="background:#777;">Сброс</a>
-    {% endif %}
+    <button class="btn" type="submit">Найти</button>
 </form>
-
-<div style="color:#666; margin-bottom:8px;">
-    {% if q %}Фильтр: <strong>{{ q }}</strong>. {% endif %}
-    Показано: <strong>{{ stock_rows|length }}</strong>
-</div>
-
-{% if stock_rows %}
-    <table>
-        <thead>
-        <tr>
-            <th>
-                <a href="?q={{ q|urlencode }}&sort=item&dir={% if sort == 'item' and dir == 'asc' %}desc{% else %}asc{% endif %}">
-                    ТМЦ{% if sort == 'item' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
-                </a>
-            </th>
-            <th>
-                <a href="?q={{ q|urlencode }}&sort=qty&dir={% if sort == 'qty' and dir == 'asc' %}desc{% else %}asc{% endif %}">
-                    Остаток{% if sort == 'qty' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
-                </a>
-            </th>
-            <th>
-                <a href="?q={{ q|urlencode }}&sort=unit&dir={% if sort == 'unit' and dir == 'asc' %}desc{% else %}asc{% endif %}">
-                    Ед.изм{% if sort == 'unit' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
-                </a>
-            </th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for row in stock_rows %}
-            <tr>
-                <td>{{ row.item.name }}</td>
-                <td>{{ row.quantity|floatformat:2 }}</td>
-                <td>{{ row.unit }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-{% else %}
-    <p>Пока нет движений или остатков.</p>
-{% endif %}
-
-</body>
-</html>
+<table>
+    <tr>
+        <th><a href="?q={{ q|urlencode }}&sort=item&dir={% if sort == 'item' and dir == 'asc' %}desc{% else %}asc{% endif %}">ТМЦ</a></th>
+        <th><a href="?q={{ q|urlencode }}&sort=qty&dir={% if sort == 'qty' and dir == 'asc' %}desc{% else %}asc{% endif %}">Остаток</a></th>
+        <th><a href="?q={{ q|urlencode }}&sort=unit&dir={% if sort == 'unit' and dir == 'asc' %}desc{% else %}asc{% endif %}">Ед.изм</a></th>
+    </tr>
+{% for row in stock_rows %}
+<tr><td>{{ row.item.name }}</td><td>{{ row.quantity|floatformat:2 }}</td><td>{{ row.unit }}</td></tr>
+{% empty %}<tr><td colspan="3">Нет данных</td></tr>{% endfor %}
+</table>
+{% endblock %}

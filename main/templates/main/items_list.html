@@ -1,0 +1,18 @@
+{% extends 'main/base.html' %}
+{% block title %}ТМЦ{% endblock %}
+{% block page_title %}ТМЦ{% endblock %}
+{% block content %}
+<a class="btn" href="/catalog/items/create/">Создать ТМЦ</a>
+<form method="get" class="card">
+    <input type="text" name="q" value="{{ q }}" placeholder="Поиск по имени/SKU">
+    <select name="category">
+        <option value="">Все категории</option>
+        {% for c in categories %}<option value="{{ c.id }}" {% if category_id == c.id|stringformat:'s' %}selected{% endif %}>{{ c.hierarchy_name }}</option>{% endfor %}
+    </select>
+    <button class="btn" type="submit">Фильтр</button>
+</form>
+<table>
+<tr><th>Наименование</th><th>SKU</th><th>Категория</th><th>Ед.</th><th>Активен</th><th></th></tr>
+{% for item in items %}<tr><td>{{ item.name }}</td><td>{{ item.sku|default:'—' }}</td><td>{{ item.category|default:'—' }}</td><td>{{ item.default_unit }}</td><td>{{ item.is_active|yesno:'Да,Нет' }}</td><td><a href="/catalog/items/{{ item.id }}/edit/">Редактировать</a></td></tr>{% endfor %}
+</table>
+{% endblock %}

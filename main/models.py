@@ -1,9 +1,7 @@
-# main/models.py
+from django.contrib.auth.models import User
 from django.db import models
-from django.contrib.auth.models import User  # Используем стандартного User
 
 
-# Профиль пользователя с ФИО
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     full_name = models.CharField('ФИО', max_length=255, blank=True)
@@ -16,38 +14,76 @@ class UserProfile(models.Model):
         return self.full_name or self.user.username
 
     def save(self, *args, **kwargs):
-        # Автоматически заполняем full_name, если не указано
         if not self.full_name and (self.user.first_name or self.user.last_name):
             self.full_name = f"{self.user.first_name or ''} {self.user.last_name or ''}".strip()
         super().save(*args, **kwargs)
 
     def get_display_name(self):
-        """Возвращает ФИО если есть, иначе username"""
         if self.full_name:
             return self.full_name
-        elif self.user.first_name or self.user.last_name:
+        if self.user.first_name or self.user.last_name:
             return f"{self.user.first_name or ''} {self.user.last_name or ''}".strip()
-        else:
-            return self.user.username
+        return self.user.username
 
-# Объект (склад/участок) - оставляем как есть
+
 class Site(models.Model):
     name = models.CharField('Наименование объекта', max_length=255, unique=True)
     code = models.CharField('Короткий код', max_length=50, blank=True, null=True)
+    is_active = models.BooleanField('Активен', default=True)
+    created_at = models.DateTimeField('Создан', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлён', auto_now=True)
 
     class Meta:
         verbose_name = 'Объект'
         verbose_name_plural = 'Объекты'
+        ordering = ['name']
 
     def __str__(self):
         return self.name
 
 
-# Справочник номенклатуры
+class Category(models.Model):
+    name = models.CharField('Категория', max_length=255, unique=True)
+    parent = models.ForeignKey(
+        'self',
+        verbose_name='Родительская категория',
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name='children',
+    )
+    is_active = models.BooleanField('Активна', default=True)
+    created_at = models.DateTimeField('Создана', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлена', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Категория'
+        verbose_name_plural = 'Категории'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def hierarchy_name(self):
+        if not self.parent_id:
+            return self.name
+        return f'{self.parent.name} / {self.name}'
+
+
 class Item(models.Model):
     name = models.CharField('Наименование ТМЦ', max_length=255, unique=True)
     default_unit = models.CharField('Ед. изм (по умолчанию)', max_length=50, default='шт')
     sku = models.CharField('Артикул/SKU', max_length=100, blank=True, null=True)
+    category = models.ForeignKey(
+        Category,
+        verbose_name='Категория',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='items',
+    )
+    is_active = models.BooleanField('Активен', default=True)
 
     class Meta:
         verbose_name = 'ТМЦ'
@@ -58,7 +94,6 @@ class Item(models.Model):
         return self.name
 
 
-# Типы операций - оставляем как есть
 class OperationType(models.TextChoices):
     INCOMING = 'incoming', 'Приход'
     MOVE = 'move', 'Перемещение'
@@ -66,21 +101,12 @@ class OperationType(models.TextChoices):
     ISSUE = 'issue', 'Выдача (расход)'
 
 
-# Операция движения - меняем created_by на стандартного User
-# Операция движения
 class Operation(models.Model):
     created_at = models.DateTimeField('Дата и время создания', auto_now_add=True)
-    operation_type = models.CharField(
-        'Тип операции',
-        max_length=20,
-        choices=OperationType.choices
-    )
-    # УБИРАЕМ это поле: site = models.ForeignKey(Site, on_delete=models.PROTECT, verbose_name='Объект')
+    operation_type = models.CharField('Тип операции', max_length=20, choices=OperationType.choices)
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, verbose_name='Создал')
-    # Новое поле (основное)
     item = models.ForeignKey(Item, on_delete=models.PROTECT, verbose_name='ТМЦ')
 
-    # Legacy поле (для совместимости после миграции)
     item_name = models.CharField('Наименование (legacy)', max_length=255, blank=True, null=True)
     serial = models.CharField('Серийный номер', max_length=255, blank=True, null=True)
     quantity = models.FloatField('Количество', default=1)
@@ -89,18 +115,27 @@ class Operation(models.Model):
     receiver_name = models.CharField('Получатель', max_length=255, blank=True, null=True)
     vehicle = models.CharField('Транспорт', max_length=255, blank=True, null=True)
 
-    # ДОБАВЛЯЕМ эти два поля вместо from_location/to_location:
-    from_site = models.ForeignKey(Site, on_delete=models.PROTECT, verbose_name='Откуда (склад)',
-                                  related_name='operations_from', null=True, blank=True)
-    to_site = models.ForeignKey(Site, on_delete=models.PROTECT, verbose_name='Куда (склад)',
-                                related_name='operations_to', null=True, blank=True)
+    from_site = models.ForeignKey(
+        Site,
+        on_delete=models.PROTECT,
+        verbose_name='Откуда (склад)',
+        related_name='operations_from',
+        null=True,
+        blank=True,
+    )
+    to_site = models.ForeignKey(
+        Site,
+        on_delete=models.PROTECT,
+        verbose_name='Куда (склад)',
+        related_name='operations_to',
+        null=True,
+        blank=True,
+    )
 
-    # Старые поля оставляем для совместимости, но делаем nullable:
     from_location = models.CharField('Откуда (локация)', max_length=255, blank=True, null=True)
     to_location = models.CharField('Куда (локация)', max_length=255, blank=True, null=True)
 
     comment = models.TextField('Комментарий', blank=True, null=True)
-
     pdf_file = models.FileField('PDF накладной', upload_to='invoices/', blank=True, null=True)
 
     class Meta:
