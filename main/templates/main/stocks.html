@@ -1,21 +1,52 @@
 {% extends 'main/base.html' %}
 {% block title %}Остатки{% endblock %}
-{% block page_title %}Остатки{% endblock %}
 {% block content %}
-<form method="get" class="card">
-    <input type="text" name="q" value="{{ q }}" placeholder="Поиск по ТМЦ/SKU">
-    <input type="hidden" name="sort" value="{{ sort|default:'item' }}" />
-    <input type="hidden" name="dir" value="{{ dir|default:'asc' }}" />
-    <button class="btn" type="submit">Найти</button>
-</form>
-<table>
-    <tr>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Остатки</h1>
+    <p class="page-subtitle">Текущие остатки локального склада {{ local_site.name }}.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-secondary" href="?q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}">Обновить</a>
+    <button class="btn btn-primary" type="button" onclick="window.print()">Экспорт</button>
+  </div>
+</div>
+
+<div class="card"><div class="card-body">
+  <form method="get" class="filters-grid">
+    <div class="field filters-search-wide">
+      <label for="id_q">Поиск</label>
+      <input id="id_q" type="text" name="q" value="{{ q }}" placeholder="Поиск по ТМЦ / SKU">
+      <input type="hidden" name="sort" value="{{ sort|default:'item' }}">
+      <input type="hidden" name="dir" value="{{ dir|default:'asc' }}">
+    </div>
+    <button class="btn btn-primary" type="submit">Применить</button>
+  </form>
+</div></div>
+
+<div class="stats-grid">
+  <div class="stat-card"><div class="meta">Позиции</div><div class="stat-value">{{ stock_rows|length }}</div></div>
+  <div class="stat-card"><div class="meta">Фильтр</div><div class="stat-value">{% if q %}Активен{% else %}Нет{% endif %}</div></div>
+</div>
+
+<div class="card">
+  <div class="card-body table-wrap">
+    <table class="table">
+      <thead>
+      <tr>
         <th><a href="?q={{ q|urlencode }}&sort=item&dir={% if sort == 'item' and dir == 'asc' %}desc{% else %}asc{% endif %}">ТМЦ</a></th>
         <th><a href="?q={{ q|urlencode }}&sort=qty&dir={% if sort == 'qty' and dir == 'asc' %}desc{% else %}asc{% endif %}">Остаток</a></th>
-        <th><a href="?q={{ q|urlencode }}&sort=unit&dir={% if sort == 'unit' and dir == 'asc' %}desc{% else %}asc{% endif %}">Ед.изм</a></th>
-    </tr>
-{% for row in stock_rows %}
-<tr><td>{{ row.item.name }}</td><td>{{ row.quantity|floatformat:2 }}</td><td>{{ row.unit }}</td></tr>
-{% empty %}<tr><td colspan="3">Нет данных</td></tr>{% endfor %}
-</table>
+        <th><a href="?q={{ q|urlencode }}&sort=unit&dir={% if sort == 'unit' and dir == 'asc' %}desc{% else %}asc{% endif %}">Ед. изм</a></th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for row in stock_rows %}
+        <tr><td>{{ row.item.name }}</td><td>{{ row.quantity|floatformat:2 }}</td><td>{{ row.unit }}</td></tr>
+      {% empty %}
+        <tr><td colspan="3"><div class="empty-state"><h3>Нет данных по остаткам</h3><p>Попробуйте изменить фильтр.</p></div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}

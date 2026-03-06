@@ -1,23 +1,60 @@
 {% extends 'main/base.html' %}
-{% block title %}Список операций{% endblock %}
-{% block page_title %}Список операций{% endblock %}
+{% block title %}Журнал операций{% endblock %}
 {% block content %}
-<form method="get" class="card">
-    {{ filter_form.q }} {{ filter_form.operation_type }} {{ filter_form.date_from }} {{ filter_form.date_to }}
-    <button class="btn" type="submit">Фильтровать</button>
-</form>
-<table>
-<tr><th>Дата</th><th>Тип</th><th>ТМЦ</th><th>Серийный</th><th>Комментарий</th><th>PDF</th></tr>
-{% for op in page_obj.object_list %}
-<tr>
-<td>{{ op.created_at|date:"d.m.Y H:i" }}</td><td>{{ op.get_operation_type_display }}</td><td>{{ op.display_item_name }}</td><td>{{ op.serial|default:'—' }}</td><td>{{ op.comment|default:'—' }}</td>
-<td>{% if op.pdf_file %}<a href="/operations/{{ op.id }}/pdf/" target="_blank">Открыть</a> | <a href="/operations/{{ op.id }}/pdf/?download=1">Скачать</a>{% elif op.operation_type == 'move' or op.operation_type == 'issue' %}<form method="post" action="/operations/{{ op.id }}/invoice/generate/">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"/><button type="submit">Сформировать</button></form>{% else %}—{% endif %}</td>
-</tr>
-{% empty %}<tr><td colspan="6">Операции не найдены</td></tr>{% endfor %}
-</table>
-<div>
-{% if page_obj.has_previous %}<a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.operation_type %}operation_type={{ request.GET.operation_type }}&{% endif %}{% if request.GET.date_from %}date_from={{ request.GET.date_from }}&{% endif %}{% if request.GET.date_to %}date_to={{ request.GET.date_to }}&{% endif %}page={{ page_obj.previous_page_number }}">Назад</a>{% endif %}
-<span>Страница {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-{% if page_obj.has_next %}<a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.operation_type %}operation_type={{ request.GET.operation_type }}&{% endif %}{% if request.GET.date_from %}date_from={{ request.GET.date_from }}&{% endif %}{% if request.GET.date_to %}date_to={{ request.GET.date_to }}&{% endif %}page={{ page_obj.next_page_number }}">Вперёд</a>{% endif %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Журнал операций</h1>
+    <p class="page-subtitle">История операций с фильтрацией и документами.</p>
+  </div>
 </div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="get" class="filters-grid">
+      <div class="field"><label for="id_q">Поиск</label>{{ filter_form.q }}</div>
+      <div class="field"><label for="id_operation_type">Тип</label>{{ filter_form.operation_type }}</div>
+      <div class="field"><label for="id_date_from">Дата с</label>{{ filter_form.date_from }}</div>
+      <div class="field"><label for="id_date_to">Дата по</label>{{ filter_form.date_to }}</div>
+      <button class="btn btn-primary" type="submit">Фильтровать</button>
+    </form>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card"><div class="meta">Всего на странице</div><div class="stat-value">{{ page_obj.object_list|length }}</div></div>
+  <div class="stat-card"><div class="meta">Всего страниц</div><div class="stat-value">{{ page_obj.paginator.num_pages }}</div></div>
+</div>
+
+<div class="card">
+  <div class="card-body table-wrap">
+    <table class="table">
+      <thead><tr><th>Дата</th><th>Тип</th><th>ТМЦ</th><th>Серийный</th><th>Комментарий</th><th>Действия</th></tr></thead>
+      <tbody>
+      {% for op in page_obj.object_list %}
+      <tr>
+        <td>{{ op.created_at|date:"d.m.Y H:i" }}</td>
+        <td>{{ op.get_operation_type_display }}</td>
+        <td>{{ op.display_item_name }}</td>
+        <td>{{ op.serial|default:'—' }}</td>
+        <td>{{ op.comment|default:'—' }}</td>
+        <td>
+          {% if op.pdf_file %}
+            <a href="/operations/{{ op.id }}/pdf/" target="_blank">Открыть</a> · <a href="/operations/{{ op.id }}/pdf/?download=1">Скачать</a>
+          {% elif op.operation_type == 'move' or op.operation_type == 'issue' %}
+            <form method="post" action="/operations/{{ op.id }}/invoice/generate/">{% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button class="btn btn-secondary" type="submit">Сформировать PDF</button>
+            </form>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6"><div class="empty-state"><h3>Операции не найдены</h3><p>Проверьте фильтры и период.</p></div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include 'main/components/pagination.html' with page_obj=page_obj %}
 {% endblock %}
