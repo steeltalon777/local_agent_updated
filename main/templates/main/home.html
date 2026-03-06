@@ -1,48 +1,104 @@
 {% extends 'main/base.html' %}
 {% block title %}Операции{% endblock %}
-{% block page_title %}Операции{% endblock %}
 {% block content %}
-<div class="small">Локальный склад: <strong>{{ local_site.name }}</strong></div>
-<div class="card">
-    <h3>Создать операцию</h3>
-    <form method="post" id="operation-form">{% csrf_token %}
-        <p>{{ form.operation_type.label }}: {{ form.operation_type }}</p>
-        <p>{{ form.item_id.label }}: {{ form.item_id }}</p>
-        <p>{{ form.serial.label }}: {{ form.serial }}</p>
-        <p>{{ form.quantity.label }}: {{ form.quantity }}</p>
-        <p id="from-site-wrap">{{ form.from_site.label }}: {{ form.from_site }}</p>
-        <p id="to-site-wrap">{{ form.to_site.label }}: {{ form.to_site }}</p>
-        <p id="receiver-wrap">{{ form.receiver_name.label }}: {{ form.receiver_name }}</p>
-        <p>{{ form.vehicle.label }}: {{ form.vehicle }}</p>
-        <p>{{ form.comment.label }}: {{ form.comment }}</p>
-        <button class="btn" type="submit">Создать</button>
-    </form>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Операции</h1>
+    <p class="page-subtitle">Создание операций по локальному складу и контроль активности за день.</p>
+  </div>
 </div>
 
-<h3>Операции за сегодня</h3>
-<table>
-<tr><th>Время</th><th>Тип</th><th>ТМЦ</th><th>Откуда</th><th>Куда</th><th>Кол-во</th><th>PDF</th></tr>
-{% for op in today_operations %}
-<tr>
-<td>{{ op.created_at|date:"H:i" }}</td><td>{{ op.get_operation_type_display }}</td><td>{{ op.display_item_name }}</td>
-<td>{{ op.from_site|default:'—' }}</td><td>{{ op.to_site|default:'—' }}</td><td>{{ op.quantity }} {{ op.display_unit }}</td>
-<td>{% if op.pdf_file %}<a href="/operations/{{ op.id }}/pdf/" target="_blank">Открыть</a> | <a href="/operations/{{ op.id }}/pdf/?download=1">Скачать</a>{% elif op.operation_type == 'move' or op.operation_type == 'issue' %}<form method="post" action="/operations/{{ op.id }}/invoice/generate/">{% csrf_token %}<input type="hidden" name="next" value="/"/><button type="submit">Сформировать</button></form>{% else %}—{% endif %}</td>
-</tr>
-{% empty %}<tr><td colspan="7">Нет операций</td></tr>{% endfor %}
-</table>
+<div class="card">
+  <div class="card-body">
+    <div class="meta">Локальный склад</div>
+    <div><strong>{{ local_site.name }}</strong></div>
+  </div>
+</div>
 
+<div class="operation-layout">
+  <div class="card">
+    <div class="card-header"><h2>Создать операцию</h2></div>
+    <div class="card-body">
+      <form method="post" id="operation-form" class="content-stack">{% csrf_token %}
+        <div class="form-grid">
+          {% for field in form %}
+            <div class="field" id="field-wrap-{{ field.name }}">
+              <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+              {{ field }}
+              {% if field.errors %}<div class="error-text">{{ field.errors|join:', ' }}</div>{% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        {% include 'main/components/form_actions.html' with submit_text='Создать операцию' %}
+      </form>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>Подсказки</h2></div>
+    <div class="card-body">
+      <ul class="hint-list">
+        <li>Для перемещения указывайте оба склада.</li>
+        <li>Для списания и выдачи склад «Куда» не требуется.</li>
+        <li>Для прихода поле «Откуда» скрывается автоматически.</li>
+        <li>Для выдачи обязательно укажите получателя.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h2>Операции за сегодня</h2></div>
+  <div class="card-body table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Время</th><th>Тип</th><th>ТМЦ</th><th>Откуда</th><th>Куда</th><th>Кол-во</th><th>Документ</th></tr>
+      </thead>
+      <tbody>
+      {% for op in today_operations %}
+      <tr>
+        <td>{{ op.created_at|date:"H:i" }}</td>
+        <td>{{ op.get_operation_type_display }}</td>
+        <td>{{ op.display_item_name }}</td>
+        <td>{{ op.from_site|default:'—' }}</td>
+        <td>{{ op.to_site|default:'—' }}</td>
+        <td>{{ op.quantity }} {{ op.display_unit }}</td>
+        <td>
+          {% if op.pdf_file %}
+            <a href="/operations/{{ op.id }}/pdf/" target="_blank">Открыть</a> ·
+            <a href="/operations/{{ op.id }}/pdf/?download=1">Скачать</a>
+          {% elif op.operation_type == 'move' or op.operation_type == 'issue' %}
+            <form method="post" action="/operations/{{ op.id }}/invoice/generate/">{% csrf_token %}
+              <input type="hidden" name="next" value="/">
+              <button class="btn btn-secondary" type="submit">Сформировать</button>
+            </form>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7"><div class="empty-state"><h3>Нет операций за сегодня</h3></div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
 const operationType = document.getElementById('id_operation_type');
-const fromWrap = document.getElementById('from-site-wrap');
-const toWrap = document.getElementById('to-site-wrap');
-const receiverWrap = document.getElementById('receiver-wrap');
+const fromWrap = document.getElementById('field-wrap-from_site');
+const toWrap = document.getElementById('field-wrap-to_site');
+const receiverWrap = document.getElementById('field-wrap-receiver_name');
 function syncType() {
-    const t = operationType.value;
-    fromWrap.style.display = (t === 'incoming') ? 'none' : 'block';
-    toWrap.style.display = (t === 'writeoff' || t === 'issue') ? 'none' : 'block';
-    receiverWrap.style.display = (t === 'issue') ? 'block' : 'none';
+  if (!operationType) return;
+  const t = operationType.value;
+  fromWrap.classList.toggle('hidden', t === 'incoming');
+  toWrap.classList.toggle('hidden', t === 'writeoff' || t === 'issue');
+  receiverWrap.classList.toggle('hidden', t !== 'issue');
 }
-operationType.addEventListener('change', syncType);
-syncType();
+if (operationType) {
+  operationType.addEventListener('change', syncType);
+  syncType();
+}
 </script>
 {% endblock %}

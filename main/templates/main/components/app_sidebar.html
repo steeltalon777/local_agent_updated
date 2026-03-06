@@ -1,0 +1,27 @@
+<aside class="app-sidebar">
+  <div class="app-brand">Складской контур</div>
+  <div class="nav-group">
+    <div class="nav-title">Работа</div>
+    <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Операции</a>
+    <a class="nav-link {% if '/stocks/' in request.path %}active{% endif %}" href="/stocks/">Остатки</a>
+    <a class="nav-link {% if '/operations/' in request.path %}active{% endif %}" href="/operations/">Журнал операций</a>
+  </div>
+  {% if can_manage_catalog %}
+  <div class="nav-group">
+    <div class="nav-title">Справочники</div>
+    <a class="nav-link {% if '/catalog/items/' in request.path %}active{% endif %}" href="/catalog/items/">ТМЦ</a>
+    <a class="nav-link {% if '/catalog/categories/' in request.path %}active{% endif %}" href="/catalog/categories/">Категории</a>
+    <a class="nav-link {% if '/sites/' in request.path %}active{% endif %}" href="/sites/">Склады</a>
+  </div>
+  {% endif %}
+  <div class="nav-group">
+    <div class="nav-title">План развития</div>
+    <span class="nav-link">Дашборды</span>
+    <span class="nav-link">Отчёты</span>
+    <span class="nav-link">Синхронизация / статус</span>
+    <span class="nav-link">Настройки</span>
+  </div>
+  {% if user.is_staff or user.is_superuser %}
+    <a class="nav-link" href="/admin/">Админка</a>
+  {% endif %}
+</aside>

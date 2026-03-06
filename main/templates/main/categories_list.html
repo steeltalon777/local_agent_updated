@@ -1,10 +1,23 @@
 {% extends 'main/base.html' %}
 {% block title %}Категории{% endblock %}
-{% block page_title %}Категории{% endblock %}
 {% block content %}
-<a class="btn" href="/catalog/categories/create/">Создать категорию</a>
-<table>
-<tr><th>Категория</th><th>Родитель</th><th>Активна</th><th></th></tr>
-{% for c in categories %}<tr><td>{{ c.name }}</td><td>{{ c.parent|default:'—' }}</td><td>{{ c.is_active|yesno:'Да,Нет' }}</td><td><a href="/catalog/categories/{{ c.id }}/edit/">Редактировать</a></td></tr>{% endfor %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Категории</h1>
+    <p class="page-subtitle">Иерархия категорий ТМЦ.</p>
+  </div>
+  <div class="page-actions"><a class="btn btn-primary" href="/catalog/categories/create/">Создать категорию</a></div>
+</div>
+<div class="card"><div class="card-body table-wrap">
+<table class="table">
+<thead><tr><th>Категория</th><th>Родитель</th><th>Активна</th><th></th></tr></thead>
+<tbody>
+{% for c in categories %}
+<tr><td>{{ c.name }}</td><td>{{ c.parent|default:'—' }}</td><td>{% if c.is_active %}<span class="badge badge-success">Да</span>{% else %}<span class="badge badge-neutral">Нет</span>{% endif %}</td><td><a href="/catalog/categories/{{ c.id }}/edit/">Редактировать</a></td></tr>
+{% empty %}
+<tr><td colspan="4"><div class="empty-state"><h3>Категории отсутствуют</h3><p>Создайте первую категорию для структурирования ТМЦ.</p></div></td></tr>
+{% endfor %}
+</tbody>
 </table>
+</div></div>
 {% endblock %}

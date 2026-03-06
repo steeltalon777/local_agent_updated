@@ -1,4 +1,11 @@
-<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Выход</title></head><body style="font-family:Arial;max-width:420px;margin:40px auto;text-align:center;">
-<h2>Вы успешно вышли</h2><a href="/login/">Войти снова</a>
-</body></html>
+{% extends 'main/base.html' %}
+{% block title %}Выход{% endblock %}
+{% block public_content %}
+<div class="auth-page">
+  <div class="auth-card text-center">
+    <h1 class="auth-title">Вы вышли из системы</h1>
+    <p class="auth-subtitle">Сессия завершена. При необходимости войдите снова.</p>
+    <a href="/login/" class="btn btn-primary">Перейти ко входу</a>
+  </div>
+</div>
+{% endblock %}
